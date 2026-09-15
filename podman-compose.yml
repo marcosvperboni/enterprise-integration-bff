@@ -1,0 +1,46 @@
+services:
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: integration-bff-redis
+    ports:
+      - "16420:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  external-pricing-api-mock:
+    build: ./external-pricing-api-mock
+    container_name: integration-bff-pricing-api
+    ports:
+      - "18121:8081"
+
+  legacy-inventory-service-mock:
+    build: ./legacy-inventory-service-mock
+    container_name: integration-bff-legacy-inventory
+    ports:
+      - "18122:8082"
+
+  internal-catalog-api-mock:
+    build: ./internal-catalog-api-mock
+    container_name: integration-bff-internal-catalog
+    ports:
+      - "18123:8083"
+
+  bff-gateway:
+    build: ./bff-gateway
+    container_name: integration-bff-gateway
+    ports:
+      - "18124:8080"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PRICING_SERVICE_URL: http://external-pricing-api-mock:8081
+      INVENTORY_SERVICE_URL: http://legacy-inventory-service-mock:8082
+      CATALOG_SERVICE_URL: http://internal-catalog-api-mock:8083
+    depends_on:
+      - redis
+      - external-pricing-api-mock
+      - legacy-inventory-service-mock
+      - internal-catalog-api-mock
